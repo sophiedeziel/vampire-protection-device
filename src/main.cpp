@@ -10,7 +10,8 @@
 #define IN4 17
 
 #define stepsPerRevolution 2048
-#define storeHeight 2048 * 5
+#define storeHeight 2048
+#define movementPrecision 32
 
 Stepper myStepper(stepsPerRevolution, IN1, IN3, IN2, IN4);
 int currentPosition = 0;
@@ -18,7 +19,7 @@ int currentPosition = 0;
 void findHomePosition() {
   Serial.println("Finding home position");
   while(digitalRead(27)) {
-    myStepper.step(-stepsPerRevolution / 8);
+    myStepper.step(-stepsPerRevolution / movementPrecision);
   }
   Serial.println("Home position: 0");
   currentPosition = 0;
@@ -26,15 +27,30 @@ void findHomePosition() {
 
 void moveUp() {
   while(currentPosition >= 0) {
-    myStepper.step(-stepsPerRevolution / 8);
-    currentPosition -= stepsPerRevolution / 8;
+    myStepper.step(-stepsPerRevolution / movementPrecision);
+    currentPosition -= stepsPerRevolution / movementPrecision;
   }
 }
 
 void moveDown() {
-  while(currentPosition < storeHeight) {
-    myStepper.step(stepsPerRevolution / 8);
-    currentPosition += stepsPerRevolution / 8;
+  while(currentPosition <= storeHeight) {
+    myStepper.step(stepsPerRevolution / movementPrecision);
+    currentPosition += stepsPerRevolution / movementPrecision;
+  }
+}
+
+void moveTo(int positionPercent) {
+  int targetPosition = positionPercent * storeHeight / 100;
+  if (targetPosition > currentPosition) {
+    while(currentPosition <= targetPosition) {
+      myStepper.step(stepsPerRevolution / movementPrecision);
+      currentPosition += stepsPerRevolution / movementPrecision;
+    }
+  } else {
+    while(currentPosition >= targetPosition) {
+      myStepper.step(-stepsPerRevolution / movementPrecision);
+      currentPosition -= stepsPerRevolution / movementPrecision;
+    }
   }
 }
 
@@ -55,12 +71,17 @@ void setup() {
   Serial.println(WiFi.localIP());
   Serial.println(" have FUN :) ");
 
-  myStepper.setSpeed(10);
+  myStepper.setSpeed(15);
 
   pinMode(27, INPUT_PULLUP);
   findHomePosition();
   moveDown();
   moveUp();
+  moveTo(50);
+  moveTo(25);
+  moveTo(75);
+  moveTo(100);
+  moveTo(0);
 }
 
 void loop() {
